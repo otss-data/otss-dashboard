@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Occupational Technology Skill Shares (OTSS)</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e293b;line-height:1.5}
+.container{max-width:1280px;margin:0 auto;padding:24px}
+
+/* Header */
+.header{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;align-items:flex-end;margin-bottom:24px}
+.header h1{font-size:1.75rem;font-weight:600;letter-spacing:-.02em}
+.badge{display:inline-block;background:#e2e8f0;color:#475569;font-size:.75rem;padding:2px 8px;border-radius:12px;margin-left:8px;vertical-align:middle}
+.header-desc{color:#64748b;font-size:.875rem;margin-top:4px;max-width:600px}
+.header-controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+/* Cards */
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:16px}
+.card-header{padding:16px}
+.card-title{font-size:1rem;font-weight:600}
+.card-desc{font-size:.8rem;color:#64748b;margin-top:2px}
+.card-body{padding:0 16px 16px}
+
+/* Control groups */
+.ctrl{display:flex;align-items:center;gap:8px;border:1px solid #e2e8f0;border-radius:14px;padding:6px 12px;background:#fff}
+.ctrl-label{font-size:.75rem;color:#64748b;white-space:nowrap}
+
+/* Toggle */
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-track{position:absolute;cursor:pointer;inset:0;background:#cbd5e1;border-radius:22px;transition:.2s}
+.toggle-track:before{position:absolute;content:"";height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked+.toggle-track{background:#1e293b}
+.toggle input:checked+.toggle-track:before{transform:translateX(18px)}
+
+/* Buttons */
+.btn{padding:6px 14px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:.875rem;font-weight:500;transition:all .15s;color:#1e293b}
+.btn:hover{background:#f1f5f9}
+.btn.active,.btn-dark{background:#1e293b;color:#fff;border-color:#1e293b}
+.btn-sm{padding:4px 10px;font-size:.8rem}
+.btn-full{width:100%;margin-top:4px}
+
+/* Snapshot metrics */
+.snapshot-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:700px){.snapshot-grid{grid-template-columns:repeat(2,1fr)}}
+.metric{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px}
+.metric-label{font-size:.78rem;color:#64748b}
+.metric-value{font-size:1.9rem;font-weight:700;margin-top:2px}
+.metric-note{font-size:.83rem;font-weight:500;margin-top:4px}
+
+/* Tabs */
+.tabs-nav{display:flex;gap:2px;border-bottom:1px solid #e2e8f0;margin-bottom:16px;padding:0 16px}
+.tab-btn{padding:10px 14px;border:none;background:none;cursor:pointer;font-size:.875rem;font-weight:500;color:#64748b;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab-btn.active{color:#1e293b;border-bottom-color:#1e293b}
+.tab-pane{display:none;padding:0 16px 16px}
+.tab-pane.active{display:block}
+
+/* Distribution layout */
+.dist-layout{display:grid;grid-template-columns:1fr 270px;gap:14px}
+@media(max-width:800px){.dist-layout{grid-template-columns:1fr}}
+
+/* Filters */
+.filter-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:14px}
+.filter-section{margin-bottom:14px}
+.filter-label{font-size:.8rem;font-weight:600;color:#374151;margin-bottom:6px}
+.btn-group{display:flex;gap:5px}
+.search-input{width:100%;padding:7px 11px;border:1px solid #e2e8f0;border-radius:9px;font-size:.875rem;outline:none;font-family:inherit}
+.search-input:focus{border-color:#94a3b8}
+.slider{width:100%;accent-color:#1e293b}
+.radio-group{display:flex;flex-direction:column;gap:5px}
+.radio-option{display:flex;align-items:center;gap:7px;font-size:.875rem;cursor:pointer}
+
+/* Charts */
+.chart-wrap{position:relative}
+
+/* Legend */
+.legend{display:flex;gap:14px;align-items:center;font-size:.8rem;flex-wrap:wrap;margin-bottom:8px}
+.leg-item{display:flex;align-items:center;gap:5px}
+.leg-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+
+/* Scatter stats */
+.stat-chip{display:inline-flex;align-items:center;gap:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:5px 11px;font-size:.8rem}
+
+/* Drawer / modal */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:100;display:none}
+.overlay.open{display:block}
+.drawer{position:fixed;bottom:0;left:0;right:0;max-height:88vh;overflow-y:auto;background:#fff;border-radius:20px 20px 0 0;z-index:101;padding:20px 24px 32px;display:none;box-shadow:0 -4px 30px rgba(0,0,0,.15)}
+.drawer.open{display:block}
+.drawer-handle{width:36px;height:4px;background:#e2e8f0;border-radius:4px;margin:0 auto 18px}
+.drawer-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px}
+.drawer-title{font-size:1.15rem;font-weight:600;padding-right:16px}
+.drawer-sub{font-size:.8rem;color:#64748b;margin-top:3px}
+.close-btn{background:none;border:none;font-size:1.4rem;cursor:pointer;color:#94a3b8;padding:0 2px;line-height:1;flex-shrink:0}
+.drawer-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:700px){.drawer-grid{grid-template-columns:1fr}}
+.delta-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px}
+.delta-card{background:#f8fafc;border-radius:9px;padding:9px;text-align:center}
+.delta-card .lbl{font-size:.73rem;color:#64748b}
+.delta-card .val{font-size:1.1rem;font-weight:700;margin-top:2px}
+.pos{color:#16a34a}.neg{color:#dc2626}
+.skills-list{list-style:none}
+.skills-list li{padding:5px 0;font-size:.875rem;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:6px;color:#334155}
+.skills-list li::before{content:"›";color:#94a3b8;font-size:1.1rem;line-height:1}
+.section-label{font-weight:600;margin-bottom:7px;font-size:.9rem}
+.summary-text{font-size:.8rem;color:#64748b;margin-top:10px;line-height:1.6}
+
+/* Footer */
+.footer{margin-top:24px;padding:14px 16px;background:#fefce8;border:1px solid #fde047;border-radius:12px;font-size:.8rem;color:#713f12}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ── Header ── -->
+  <div class="header">
+    <div>
+      <h1>Occupational Technology Skill Shares (OTSS) <span class="badge">Dashboard</span></h1>
+      <p class="header-desc">Explore occupational skill shares by technology class (manual, digital, frontier), their change over time, and how frontier shifts relate to employment growth.</p>
+      <p class="header-desc" style="margin-top:6px">Data and classification based on: Genz, S., Gregory, T. &amp; Lehmer, F. (2026). <em>AI-Powered Skill Classification: Mapping Technology Intensity in the German Labour Market.</em> Fiscal Studies, <em>forthcoming.</em>  </p>
+  
+    </div>
+    <div class="header-controls">
+      <div class="ctrl">
+        <span class="ctrl-label">Employment-weighted</span>
+        <label class="toggle">
+          <input type="checkbox" id="toggleWeighting" checked>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+      <div class="ctrl">
+        <span class="ctrl-label">Year</span>
+        <button class="btn btn-sm" id="btn2012" onclick="setYear(2012)">2012</button>
+        <button class="btn btn-sm active" id="btn2023" onclick="setYear(2023)">2023</button>
+      </div>
+      <button class="btn" onclick="exportJSON()">&#8595; Export JSON</button>
+    </div>
+  </div>
+
+  <!-- ── Snapshot ── -->
+  <div class="card" style="margin-bottom:20px">
+    <div class="card-header" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="card-title">Snapshot</div>
+        <div class="card-desc">Economy-wide technology composition (manual/digital/frontier). Toggle year and weighting above.</div>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
+        <span style="font-size:.75rem;color:#64748b">Segment:</span>
+        <button class="btn btn-sm active" id="seg-total"      onclick="setSnapshotSegment('total',this)">Total</button>
+        <button class="btn btn-sm"        id="seg-production" onclick="setSnapshotSegment('production',this)">Production</button>
+        <button class="btn btn-sm"        id="seg-service"    onclick="setSnapshotSegment('service',this)">Service</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+        <!-- Metrics + chart -->
+        <div style="flex:1;min-width:260px">
+          <div class="snapshot-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px">
+            <div class="metric">
+              <div class="metric-label">Manual</div>
+              <div class="metric-value" id="val-manual">–</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Digital</div>
+              <div class="metric-value" id="val-digital">–</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Frontier</div>
+              <div class="metric-value" id="val-frontier">–</div>
+            </div>
+          </div>
+          <!-- Chart legend -->
+          <div style="display:flex;gap:16px;margin-bottom:8px;font-size:.78rem;color:#475569;align-items:center">
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:#7F807F;display:inline-block;border-radius:2px;flex-shrink:0"></span>Manual</span>
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:#1F78B4;display:inline-block;border-radius:2px;flex-shrink:0"></span>Digital</span>
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:#B2DF8A;display:inline-block;border-radius:2px;flex-shrink:0"></span>Frontier</span>
+          </div>
+          <div class="chart-wrap" style="height:140px">
+            <canvas id="snapshotChart"></canvas>
+          </div>
+        </div>
+        <!-- Interpretation box -->
+        <div class="metric" style="min-width:200px;max-width:280px;align-self:stretch;display:flex;flex-direction:column">
+          <div class="metric-label" style="display:flex;align-items:center;gap:4px">
+            Interpretation
+            <span style="cursor:help;color:#94a3b8;font-size:.8rem" title="Manual: skills without digital support (pre-digital era). Digital: skills using IT/digital tools that support the work process (3rd Industrial Revolution, 1970s+). Frontier: skills for the most advanced technologies — AI, machine learning, collaborative robots (4th Industrial Revolution, late 2000s+). Source: Genz, Gregory &amp; Lehmer (2026).">ⓘ</span>
+          </div>
+          <div id="val-interp" style="font-size:.88rem;font-weight:600;color:#334155;margin-top:8px;line-height:1.5;flex:1">–</div>
+        </div>
+      </div>
+
+      <!-- Measure definitions -->
+      <div style="margin-top:16px;border-top:1px solid #f1f5f9;padding-top:12px">
+        <div style="font-size:.7rem;font-weight:600;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Measure definitions</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          <div>
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
+              <span style="width:10px;height:10px;background:#7F807F;display:inline-block;border-radius:2px;flex-shrink:0"></span>
+              <span style="font-size:.78rem;font-weight:600;color:#374151">Manual</span>
+            </div>
+            <div style="font-size:.76rem;color:#64748b;line-height:1.45">Skills to operate work processes <em>without</em> digital support — manually controlled equipment or non-IT-supported tools. Typical of work before the Digital Revolution (1st &amp; 2nd Industrial Revolutions).</div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
+              <span style="width:10px;height:10px;background:#1F78B4;display:inline-block;border-radius:2px;flex-shrink:0"></span>
+              <span style="font-size:.78rem;font-weight:600;color:#374151">Digital</span>
+            </div>
+            <div style="font-size:.76rem;color:#64748b;line-height:1.45">Skills to use digital/IT tools that support or indirectly manage the work process — e.g. CRM software, ERP systems, CNC machines. Computerisation wave from the 1970s onward (3rd Industrial Revolution).</div>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
+              <span style="width:10px;height:10px;background:#B2DF8A;display:inline-block;border-radius:2px;flex-shrink:0"></span>
+              <span style="font-size:.78rem;font-weight:600;color:#374151">Frontier</span>
+            </div>
+            <div style="font-size:.76rem;color:#64748b;line-height:1.45">Skills to use the most advanced technologies — e.g. machine learning, AI systems, collaborative robots, digital twins. Fourth Industrial Revolution since the late 2000s.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Tabs ── -->
+  <div class="card">
+    <div class="tabs-nav" style="padding-top:12px">
+      <button class="tab-btn active" onclick="switchTab('distribution',this)">Occupational Distribution</button>
+      <button class="tab-btn" onclick="switchTab('employment',this)">Employment Lens</button>
+    </div>
+
+    <!-- Distribution -->
+    <div id="tab-distribution" class="tab-pane active">
+      <div class="dist-layout">
+        <div>
+          <div class="legend">
+            <span class="leg-item"><span class="leg-dot" style="background:#7F807F"></span>Manual</span>
+            <span class="leg-item"><span class="leg-dot" style="background:#1F78B4"></span>Digital</span>
+            <span class="leg-item"><span class="leg-dot" style="background:#B2DF8A"></span>Frontier</span>
+            <span style="font-size:.78rem;color:#94a3b8">(click a bar to see details)</span>
+          </div>
+          <div id="rankingNote" style="font-size:.78rem;color:#94a3b8;margin-bottom:6px;display:none"></div>
+          <div class="chart-wrap" id="rankingWrap" style="height:320px">
+            <canvas id="rankingChart"></canvas>
+          </div>
+        </div>
+        <div class="filter-card">
+          <div class="filter-section">
+            <div class="filter-label">Occupation level</div>
+            <div class="btn-group">
+              <button class="btn btn-sm active" id="lvl2d" onclick="setLevel('2d')">2-digit</button>
+              <button class="btn btn-sm" id="lvl3d" onclick="setLevel('3d')">3-digit</button>
+              <button class="btn btn-sm" id="lvl5d" onclick="setLevel('5d')">5-digit</button>
+            </div>
+          </div>
+          <div class="filter-section">
+            <div class="filter-label">Search</div>
+            <input class="search-input" type="text" id="searchInput" placeholder="Title or code…" oninput="onSearch(this.value)">
+          </div>
+          <div class="filter-section">
+            <div class="filter-label">Min. employment: <span id="minEmpLabel">0</span></div>
+            <input class="slider" type="range" min="0" max="4000000" step="50000" value="0" id="minEmpSlider" oninput="onMinEmp(this.value)">
+          </div>
+          <div class="filter-section">
+            <div class="filter-label">Show</div>
+            <div class="btn-group">
+              <button class="btn btn-sm" id="topN10"  onclick="setTopN(10)">Top 10</button>
+              <button class="btn btn-sm" id="topN20"  onclick="setTopN(20)">Top 20</button>
+              <button class="btn btn-sm" id="topN50"  onclick="setTopN(50)">Top 50</button>
+              <button class="btn btn-sm active" id="topNall" onclick="setTopN(null)">All</button>
+            </div>
+          </div>
+          <div class="filter-section">
+            <div class="filter-label">Sort by</div>
+            <div class="radio-group">
+              <label class="radio-option"><input type="radio" name="sortBy" value="frontier" checked onchange="onSort('frontier')"> Frontier share</label>
+              <label class="radio-option"><input type="radio" name="sortBy" value="digital" onchange="onSort('digital')"> Digital share</label>
+              <label class="radio-option"><input type="radio" name="sortBy" value="manual" onchange="onSort('manual')"> Manual share</label>
+              <label class="radio-option"><input type="radio" name="sortBy" value="employment" onchange="onSort('employment')"> Employment size</label>
+            </div>
+          </div>
+          <button class="btn btn-full" onclick="exportSchema()">&#8595; Data schema (JSON)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Employment Lens -->
+    <div id="tab-employment" class="tab-pane">
+      <div style="margin-bottom:10px">
+        <span class="stat-chip" id="avgDeltaStat">Avg &#916; Frontier: –</span>
+        <p style="font-size:.8rem;color:#64748b;margin-top:8px">Each bubble is an occupation. X&nbsp;= Δ&nbsp;frontier share (2012→2023), Y&nbsp;= employment growth rate, bubble area&nbsp;∝ 2023 employment. Click a bubble for details.</p>
+      </div>
+      <div class="chart-wrap" style="height:380px">
+        <canvas id="scatterChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer" id="dataStatus">
+    Loading data&hellip;
+  </div>
+</div>
+
+<!-- ── Detail drawer ── -->
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-title" id="drawerTitle"></div>
+      <div class="drawer-sub" id="drawerSub"></div>
+    </div>
+    <button class="close-btn" onclick="closeDrawer()">&#10005;</button>
+  </div>
+  <div class="drawer-grid">
+    <div>
+      <div class="section-label">Technology composition 2012 vs 2023</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="detailChart"></canvas></div>
+      <div class="delta-cards" id="deltaCards"></div>
+      <p class="summary-text" id="drawerSummary"></p>
+    </div>
+    <div>
+      <div class="section-label">Top frontier skills (2023)</div>
+      <ul class="skills-list" id="frontierList"></ul>
+      <div class="section-label" style="margin-top:14px">Top digital skills (2023)</div>
+      <ul class="skills-list" id="digitalList"></ul>
+      <button class="btn btn-full" id="dlOccBtn" style="margin-top:16px">&#8595; Download occupation JSON</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+const C = { manual:"#7F807F", digital:"#1F78B4", frontier:"#B2DF8A" };
+const DATA_FILES = { "2d":"./data/occ2digit.json", "3d":"./data/occ3digit.json", "5d":"./data/occ5digit.json" };
+let OCCUPATIONS = [];
+const DATA_CACHE = {};
+let AGG_DATA = null;   // loaded from aggregate.json: { 2012: {manual,digital,frontier}, 2023: {...} }
+
+// Paper values: Figure 2 (employment-weighted) and Figure A.4 (unweighted)
+const PAPER_SNAPSHOT = {
+  weighted: {
+    total:      { manual:0.42, digital:0.38, frontier:0.20 },
+    production: { manual:0.34, digital:0.34, frontier:0.32 },
+    service:    { manual:0.39, digital:0.47, frontier:0.14 },
+  },
+  unweighted: {
+    total:      { manual:0.43, digital:0.35, frontier:0.22 },
+    production: { manual:0.36, digital:0.28, frontier:0.36 },
+    service:    { manual:0.39, digital:0.44, frontier:0.17 },
+  }
+};
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const st = { year:2023, weighted:true, level:"2d", search:"", minEmp:0, sortBy:"frontier", snapshotSegment:"total", topN:null };
+let charts = {};
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const pct  = (x, d=0) => `${(x*100).toFixed(d)}%`;
+const fmtN = n => new Intl.NumberFormat(undefined,{maximumFractionDigits:0}).format(n);
+const growthRate = (a,b) => a>0 ? (b-a)/a : 0;
+
+function weightedAvg(rows, year, useEmp) {
+  const key = year===2012 ? "shares_2012" : "shares_2023";
+  let wsum=0, m=0, d=0, f=0;
+  for (const r of rows) {
+    const w = useEmp ? (year===2012 ? r.employment_2012 : r.employment_2023) : 1;
+    if (!w || w<=0) continue;
+    const s = r[key];
+    if (!s) continue;
+    m += w*(s.manual||0); d += w*(s.digital||0); f += w*(s.frontier||0); wsum+=w;
+  }
+  return wsum>0 ? {manual:m/wsum,digital:d/wsum,frontier:f/wsum} : {manual:0,digital:0,frontier:0};
+}
+
+function getRows() {
+  const q = st.search.trim().toLowerCase();
+  const wkey = st.weighted ? "weighted" : "unweighted";
+  const skey = st.year===2012 ? "shares_2012" : "shares_2023";
+  return OCCUPATIONS
+    .filter(r => r.level===st.level)
+    .filter(r => (st.year===2012 ? r.employment_2012 : r.employment_2023) >= st.minEmp)
+    .filter(r => !q || r.title.toLowerCase().includes(q) || String(r.code).includes(q))
+    .filter(r => { const s = r[wkey]?.[skey]; return s != null && s.frontier != null; });
+}
+
+// ─── DATA LOADING ─────────────────────────────────────────────────────────────
+function setStatus(msg, isErr) {
+  const el = document.getElementById("dataStatus");
+  el.textContent = msg;
+  el.style.background = isErr ? "#fef2f2" : "#fefce8";
+  el.style.borderColor = isErr ? "#fca5a5" : "#fde047";
+  el.style.color = isErr ? "#991b1b" : "#713f12";
+}
+
+function updateSliderMax() {
+  const max = OCCUPATIONS.reduce((m,r) => Math.max(m, r.employment_2012||0, r.employment_2023||0), 0);
+  const slider = document.getElementById("minEmpSlider");
+  const step = max > 500000 ? 50000 : max > 100000 ? 10000 : 1000;
+  slider.max = Math.ceil(max / step) * step;
+  slider.step = step;
+}
+
+async function loadLevel(level) {
+  if (DATA_CACHE[level]) {
+    OCCUPATIONS = DATA_CACHE[level];
+    updateSliderMax();
+    render();
+    return;
+  }
+  if (location.protocol === "file:") {
+    setStatus("Open via a local server to load data from ./data/ (e.g. run: npx serve . in this folder)", true);
+    return;
+  }
+  const file = DATA_FILES[level];
+  setStatus(`Loading ${file}\u2026`);
+  try {
+    const res = await fetch(file);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    DATA_CACHE[level] = await res.json();
+    if (level === "2d" || level === "3d") {
+      const conv = s => ({ manual:s.manual/100, digital:s.digital/100, frontier:s.frontier/100 });
+      DATA_CACHE[level] = DATA_CACHE[level].map(r => ({
+        ...r,
+        weighted:   { shares_2012: conv(r.weighted.shares_2012),   shares_2023: conv(r.weighted.shares_2023) },
+        unweighted: { shares_2012: conv(r.unweighted.shares_2012), shares_2023: conv(r.unweighted.shares_2023) },
+      }));
+    }
+    OCCUPATIONS = DATA_CACHE[level];
+    setStatus(`${OCCUPATIONS.length} occupations loaded from ${file}`);
+    updateSliderMax();
+    render();
+  } catch(e) {
+    setStatus(`Could not load ${file}: ${e.message}`, true);
+  }
+}
+
+async function loadAggregate() {
+  if (location.protocol === "file:") return;
+  try {
+    const res = await fetch("./data/aggregate.json");
+    if (!res.ok) return;
+    const rows = await res.json();
+    const r = rows[0];
+    // shares are stored on the 0–100 scale; convert to 0–1 for pct()
+    const conv = s => ({ manual:s.manual/100, digital:s.digital/100, frontier:s.frontier/100 });
+    AGG_DATA = {
+      weighted:   { 2012: conv(r.weighted.shares_2012),   2023: conv(r.weighted.shares_2023) },
+      unweighted: { 2012: conv(r.unweighted.shares_2012), 2023: conv(r.unweighted.shares_2023) },
+    };
+    renderSnapshot();
+  } catch(_) {}
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function render() {
+  const rows = getRows();
+  renderSnapshot();
+  renderRanking(rows);
+  renderScatter(rows);
+}
+
+function upsertChart(id, config) {
+  if (charts[id]) { charts[id].data = config.data; charts[id].update(); return charts[id]; }
+  charts[id] = new Chart(document.getElementById(id), config);
+  return charts[id];
+}
+
+function snapshotInterpretation(seg, segName) {
+  const f = seg.frontier, d = seg.digital, m = seg.manual;
+
+  // All three within ~10pp (Production: 34/34/32)
+  if (Math.max(f, d, m) - Math.min(f, d, m) < 0.10) {
+    return `All three task types are similarly represented. The high frontier share (${pct(f)}) reflects greater reliance on highly advanced or self-controlled technologies in production-related work.`;
+  }
+
+  // Digital leads (Service: 39/47/14)
+  if (d > m && d > f) {
+    return `Digital skills dominate (${pct(d)}), while frontier intensity is comparatively low (${pct(f)}). This suggests that digitalization here is more often incremental rather than frontier-driven.`;
+  }
+
+  // Frontier leads (unlikely with current data)
+  if (f > m && f > d) {
+    return `Frontier technology skills lead (${pct(f)}), indicating strong reliance on highly advanced or self-controlled technologies. Manual accounts for ${pct(m)}, digital for ${pct(d)}.`;
+  }
+
+  // Manual leads, frontier clearly below digital (Total: 42/38/20 or 43/35/22)
+  if (f < d * 0.65) {
+    return `Manual skills account for the largest share of skill content (${pct(m)}), followed by digital (${pct(d)}) and frontier technologies (${pct(f)}). Frontier skills are concentrated in specialized (technical, scientific, IT) occupations, while digital skills are broadly distributed across occupational domains.`;
+  }
+
+  // Manual leads, frontier close to digital
+  return `Manual skills lead (${pct(m)}); digital (${pct(d)}) and frontier (${pct(f)}) skills both play significant roles. Frontier skills tend to be more concentrated in specialized occupations than digital skills, which are broadly distributed.`;
+}
+
+function renderSnapshot() {
+  const key   = st.weighted ? "weighted" : "unweighted";
+  const paper = PAPER_SNAPSHOT[key];
+
+  // Total: use aggregate.json when weighted + loaded; otherwise fall back to paper values.
+  // Production / Service: always from paper (aggregate.json has no breakdown).
+  function segData(name) {
+    if (name === "total" && AGG_DATA) return AGG_DATA[key][st.year];
+    return paper[name];
+  }
+
+  const seg = segData(st.snapshotSegment);
+  document.getElementById("val-manual").textContent   = pct(seg.manual);
+  document.getElementById("val-digital").textContent  = pct(seg.digital);
+  document.getElementById("val-frontier").textContent = pct(seg.frontier);
+  document.getElementById("val-interp").textContent   = snapshotInterpretation(seg, st.snapshotSegment);
+
+  // Chart shows all 3 segments for comparison (like Figure 2 / A.4)
+  const segs   = ["total","production","service"];
+  const labels = ["Total","Production","Service"];
+  const displayLabels = labels.map((l,i) => segs[i]===st.snapshotSegment ? `▶ ${l}` : l);
+
+  upsertChart("snapshotChart", {
+    type:"bar",
+    data:{ labels: displayLabels, datasets:[
+      {label:"Manual",   data:segs.map(s=>segData(s).manual),   backgroundColor:C.manual},
+      {label:"Digital",  data:segs.map(s=>segData(s).digital),  backgroundColor:C.digital},
+      {label:"Frontier", data:segs.map(s=>segData(s).frontier), backgroundColor:C.frontier},
+    ]},
+    options:{
+      indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true,max:1,ticks:{callback:v=>pct(v)}},y:{stacked:true}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${pct(c.raw)}`}}}
+    }
+  });
+}
+
+function setSnapshotSegment(seg, btn) {
+  st.snapshotSegment = seg;
+  ["total","production","service"].forEach(s =>
+    document.getElementById("seg-"+s).classList.toggle("active", s===seg)
+  );
+  renderSnapshot();
+}
+
+function renderRanking(rows) {
+  const wkey = st.weighted ? "weighted" : "unweighted";
+  const skey = st.year===2012 ? "shares_2012":"shares_2023";
+  const shares = r => r[wkey][skey];
+  const getSV = r => st.sortBy==="employment" ? (st.year===2012?r.employment_2012:r.employment_2023)
+                   : st.sortBy==="digital"    ? shares(r).digital
+                   : st.sortBy==="manual"     ? shares(r).manual
+                   : shares(r).frontier;
+  const sorted = [...rows].sort((a,b)=>getSV(b)-getSV(a));
+
+  const display = (st.topN && sorted.length > st.topN) ? sorted.slice(0, st.topN) : sorted;
+
+  const noteEl = document.getElementById("rankingNote");
+  if (display.length < sorted.length) {
+    noteEl.textContent = `Top ${display.length} of ${sorted.length} shown`;
+    noteEl.style.display = "block";
+  } else {
+    noteEl.style.display = "none";
+  }
+
+  // Cap at 20000px to avoid browser canvas height limits (~32767px)
+  document.getElementById("rankingWrap").style.height = Math.min(20000, Math.max(200, display.length*28+40))+"px";
+
+  const maxLen = st.level==="2d" ? 32 : st.level==="5d" ? 52 : 42;
+  const labels = display.map(r => r.title.length>maxLen ? r.title.slice(0,maxLen-1)+"…" : r.title);
+  if (charts.rankingChart) { charts.rankingChart.destroy(); delete charts.rankingChart; }
+  const ch = upsertChart("rankingChart",{
+    type:"bar",
+    data:{labels, datasets:[
+      {label:"Manual",   data:display.map(r=>shares(r).manual),   backgroundColor:C.manual},
+      {label:"Digital",  data:display.map(r=>shares(r).digital),  backgroundColor:C.digital},
+      {label:"Frontier", data:display.map(r=>shares(r).frontier), backgroundColor:C.frontier},
+    ]},
+    options:{
+      indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true,max:1,ticks:{callback:v=>pct(v)}},y:{stacked:true}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        title: items => display[items[0].dataIndex].title,
+        label: c => `${c.dataset.label}: ${pct(c.raw)}`
+      }}},
+      onClick:(_,els)=>{ if(els.length) openDetail(ch._rows[els[0].index]); }
+    }
+  });
+  ch._rows = display;
+}
+
+function renderScatter(rows) {
+  const wkey = st.weighted ? "weighted" : "unweighted";
+
+  // Only include occupations with valid shares in BOTH years
+  const valid = rows.filter(r => {
+    const s12 = r[wkey]?.shares_2012;
+    const s23 = r[wkey]?.shares_2023;
+    return s12?.frontier != null && s23?.frontier != null
+        && r.employment_2012 != null && r.employment_2023 != null;
+  });
+
+  // Bubble area ∝ employment: use sqrt so visual area (π·r²) is proportional to headcount.
+  // Scale constants tuned so the largest occupation hits r≈28 at each level.
+  const empScale = st.level === "2d" ? 5000 : st.level === "3d" ? 2500 : 300;
+
+  const pts = valid.map(r=>({
+    x: r[wkey].shares_2023.frontier - r[wkey].shares_2012.frontier,
+    y: growthRate(r.employment_2012,r.employment_2023),
+    r: Math.max(4, Math.min(28, Math.sqrt(r.employment_2023 / empScale))),
+    _occ: r
+  }));
+  const avg = pts.length ? pts.reduce((s,p)=>s+p.x,0)/pts.length : 0;
+  document.getElementById("avgDeltaStat").textContent = `Avg \u0394 Frontier: ${pct(avg,1)}`;
+
+  const ch = upsertChart("scatterChart",{
+    type:"bubble",
+    data:{datasets:[{
+      label:"Occupations", data:pts,
+      backgroundColor:C.frontier+"BB", borderColor:C.frontier, borderWidth:1
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{
+        x:{title:{display:true,text:"Δ Frontier share (2012→2023)"},ticks:{callback:v=>pct(v,0)}},
+        y:{title:{display:true,text:"Employment growth rate"},ticks:{callback:v=>pct(v,0)}}
+      },
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{
+        const p=c.raw;
+        return [`${p._occ.title}`,`Δ Frontier: ${pct(p.x,1)}`,`Emp growth: ${pct(p.y,1)}`,`Employment 2023: ${fmtN(p._occ.employment_2023)}`];
+      }}}},
+      onClick:(_,els)=>{ if(els.length) openDetail(ch._pts[els[0].index]._occ); }
+    }
+  });
+  ch._pts = pts;
+}
+
+// ─── DETAIL DRAWER ───────────────────────────────────────────────────────────
+function openDetail(occ) {
+  document.getElementById("drawerTitle").textContent = occ.title;
+  const gr = growthRate(occ.employment_2012,occ.employment_2023);
+  document.getElementById("drawerSub").textContent =
+    `Code: ${occ.code}  ·  Employment 2023: ${fmtN(occ.employment_2023)}  ·  Growth: ${pct(gr,1)}`;
+
+  const wkey = st.weighted ? "weighted" : "unweighted";
+  const s12 = occ[wkey].shares_2012;
+  const s23 = occ[wkey].shares_2023;
+  const delta = {
+    manual:   s23.manual   - s12.manual,
+    digital:  s23.digital  - s12.digital,
+    frontier: s23.frontier - s12.frontier
+  };
+  document.getElementById("deltaCards").innerHTML = ["manual","digital","frontier"].map(k=>{
+    const d=delta[k], cls=d>=0?"pos":"neg";
+    return `<div class="delta-card">
+      <div class="lbl">${k[0].toUpperCase()+k.slice(1)}</div>
+      <div class="val ${cls}">${d>=0?"+":""}${pct(d,1)}</div>
+    </div>`;
+  }).join("");
+
+  const dir = delta.frontier>=0 ? "grew" : "declined";
+  document.getElementById("drawerSummary").textContent =
+    `Frontier skills ${dir} by ${pct(Math.abs(delta.frontier),1)} pp. ` +
+    `Digital shifted ${pct(delta.digital,1)} pp. Manual: ${pct(delta.manual,1)} pp.`;
+
+  const noData = `<li style="color:#94a3b8;font-style:italic">Not available</li>`;
+  document.getElementById("frontierList").innerHTML =
+    (occ.top_frontier_skills_2023||[]).length
+      ? occ.top_frontier_skills_2023.map(s=>`<li>${s}</li>`).join("") : noData;
+  document.getElementById("digitalList").innerHTML =
+    (occ.top_digital_skills_2023||[]).length
+      ? occ.top_digital_skills_2023.map(s=>`<li>${s}</li>`).join("") : noData;
+
+  // Detail chart — must destroy and recreate (different data shape each time)
+  if (charts.detail) { charts.detail.destroy(); delete charts.detail; }
+  charts.detail = new Chart(document.getElementById("detailChart"),{
+    type:"bar",
+    data:{labels:["2012","2023"],datasets:[
+      {label:"Manual",   data:[s12.manual,  s23.manual],  backgroundColor:C.manual},
+      {label:"Digital",  data:[s12.digital, s23.digital], backgroundColor:C.digital},
+      {label:"Frontier", data:[s12.frontier,s23.frontier],backgroundColor:C.frontier},
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true},y:{stacked:true,max:1,ticks:{callback:v=>pct(v)}}},
+      plugins:{legend:{display:true,position:"bottom"},tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${pct(c.raw)}`}}}
+    }
+  });
+
+  document.getElementById("dlOccBtn").onclick = () =>
+    dlJSON(`occupation-${occ.code}.json`, occ);
+
+  document.getElementById("overlay").classList.add("open");
+  document.getElementById("drawer").classList.add("open");
+}
+
+function closeDrawer() {
+  document.getElementById("overlay").classList.remove("open");
+  document.getElementById("drawer").classList.remove("open");
+}
+
+// ─── CONTROLS ────────────────────────────────────────────────────────────────
+function setYear(y) {
+  st.year = y;
+  document.getElementById("btn2012").classList.toggle("active", y===2012);
+  document.getElementById("btn2023").classList.toggle("active", y===2023);
+  render();
+}
+function setLevel(l) {
+  st.level = l;
+  st.minEmp = 0;
+  document.getElementById("minEmpSlider").value = 0;
+  document.getElementById("minEmpLabel").textContent = "0";
+  document.getElementById("lvl2d").classList.toggle("active", l==="2d");
+  document.getElementById("lvl3d").classList.toggle("active", l==="3d");
+  document.getElementById("lvl5d").classList.toggle("active", l==="5d");
+  // 5-digit has 1000+ occupations; cap default to Top 50 to avoid canvas overflow
+  if (l === "5d" && st.topN === null) setTopN(50);
+  loadLevel(l);
+}
+function setTopN(n) {
+  st.topN = n;
+  document.getElementById("topN10").classList.toggle("active", n===10);
+  document.getElementById("topN20").classList.toggle("active", n===20);
+  document.getElementById("topN50").classList.toggle("active", n===50);
+  document.getElementById("topNall").classList.toggle("active", n===null);
+  render();
+}
+function onSearch(v) { st.search=v; render(); }
+function onMinEmp(v) {
+  st.minEmp = +v;
+  document.getElementById("minEmpLabel").textContent = +v===0 ? "0" : fmtN(+v);
+  render();
+}
+function onSort(v) { st.sortBy=v; render(); }
+document.getElementById("toggleWeighting").addEventListener("change", e => {
+  st.weighted = e.target.checked; render();
+});
+
+function switchTab(tab, btn) {
+  document.querySelectorAll(".tab-pane").forEach(el=>el.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(el=>el.classList.remove("active"));
+  document.getElementById("tab-"+tab).classList.add("active");
+  btn.classList.add("active");
+}
+
+// ─── EXPORT ──────────────────────────────────────────────────────────────────
+function dlJSON(fname, obj) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:"application/json"}));
+  const a = Object.assign(document.createElement("a"),{href:url,download:fname});
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+function exportJSON()   { dlJSON("occupational-skillshares.json",{rows:getRows(),year:st.year,weighting:st.weighted?"employment":"equal"}); }
+function exportSchema() { dlJSON("data-schema.json",{fields:[
+  {name:"code",type:"string"},{name:"title",type:"string"},
+  {name:"level",type:"string",values:["3d","5d"]},
+  {name:"employment_2012",type:"number"},{name:"employment_2023",type:"number"},
+  {name:"shares_2012",type:"object",fields:["manual","digital","frontier"]},
+  {name:"shares_2023",type:"object",fields:["manual","digital","frontier"]},
+  {name:"top_frontier_skills_2023",type:"array"},{name:"top_digital_skills_2023",type:"array"}
+]}); }
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadLevel("2d");
+loadAggregate();
+</script>
+</body>
+</html>

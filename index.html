@@ -119,7 +119,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
     <div>
       <h1>Occupational Technology Skill Shares (OTSS) <span class="badge">Dashboard</span></h1>
       <p class="header-desc">Explore occupational skill shares by technology class (manual, digital, frontier), their change over time, and how frontier shifts relate to employment growth.</p>
-      <p class="header-desc" style="margin-top:6px">Data and classification based on: Genz, S., Gregory, T. &amp; Lehmer, F. (2026). <em>AI-Powered Skill Classification: Mapping Technology Intensity in the German Labour Market.</em> Fiscal Studies, <em>forthcoming.</em>  </p>
+      <p class="header-desc" style="margin-top:6px">Data and classification based on: Genz, S., Gregory, T. &amp; Lehmer, F. (2026). <a href="https://www.dropbox.com/scl/fi/z6ly2ih4ezpf0yv86m2if/Genz_Gregory_Lehmer_2026_Fiscal_Studies.pdf?rlkey=1v5hah8lavj5chpcb5f2wvs4f&amp;e=1&amp;dl=0" target="_blank" style="color:inherit;text-decoration:underline"><em>AI-Powered Skill Classification: Mapping Technology Intensity in the German Labour Market.</em></a> Fiscal Studies, <em>forthcoming.</em></p>
   
     </div>
     <div class="header-controls">
@@ -228,6 +228,19 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
       <button class="tab-btn" onclick="switchTab('employment',this)">Employment Lens</button>
     </div>
 
+    <!-- Shared: Occupation level — visible on both tabs -->
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 16px 10px;border-bottom:1px solid #f1f5f9">
+      <span style="font-size:.8rem;font-weight:600;color:#374151;display:flex;align-items:center;gap:4px">
+        Occupation level
+        <span style="cursor:help;color:#94a3b8;font-size:.8rem" title="Occupations are classified according to the KldB – Klassifizierung der Berufe 2010 (Federal Employment Agency, Germany). Analyses are shown at the 2-, 3-, and 5-digit KldB levels.">ⓘ</span>
+      </span>
+      <div class="btn-group">
+        <button class="btn btn-sm active" id="lvl2d" onclick="setLevel('2d')">2-digit</button>
+        <button class="btn btn-sm" id="lvl3d" onclick="setLevel('3d')">3-digit</button>
+        <button class="btn btn-sm" id="lvl5d" onclick="setLevel('5d')">5-digit</button>
+      </div>
+    </div>
+
     <!-- Distribution -->
     <div id="tab-distribution" class="tab-pane active">
       <div class="dist-layout">
@@ -244,14 +257,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
           </div>
         </div>
         <div class="filter-card">
-          <div class="filter-section">
-            <div class="filter-label">Occupation level</div>
-            <div class="btn-group">
-              <button class="btn btn-sm active" id="lvl2d" onclick="setLevel('2d')">2-digit</button>
-              <button class="btn btn-sm" id="lvl3d" onclick="setLevel('3d')">3-digit</button>
-              <button class="btn btn-sm" id="lvl5d" onclick="setLevel('5d')">5-digit</button>
-            </div>
-          </div>
           <div class="filter-section">
             <div class="filter-label">Search</div>
             <input class="search-input" type="text" id="searchInput" placeholder="Title or code…" oninput="onSearch(this.value)">
@@ -616,7 +621,7 @@ function renderScatter(rows) {
     options:{
       responsive:true, maintainAspectRatio:false,
       scales:{
-        x:{title:{display:true,text:"Δ Frontier share (2012→2023)"},ticks:{callback:v=>pct(v,0)}},
+        x:{min:-0.10,max:0.30,title:{display:true,text:"Δ Frontier share (2012→2023)"},ticks:{callback:v=>pct(v,0)}},
         y:{title:{display:true,text:"Employment growth rate"},ticks:{callback:v=>pct(v,0)}}
       },
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{
@@ -648,14 +653,14 @@ function openDetail(occ) {
     const d=delta[k], cls=d>=0?"pos":"neg";
     return `<div class="delta-card">
       <div class="lbl">${k[0].toUpperCase()+k.slice(1)}</div>
-      <div class="val ${cls}">${d>=0?"+":""}${pct(d,1)}</div>
+      <div class="val ${cls}">${d>=0?"+":""}${(d*100).toFixed(1)} pp</div>
     </div>`;
   }).join("");
 
   const dir = delta.frontier>=0 ? "grew" : "declined";
   document.getElementById("drawerSummary").textContent =
-    `Frontier skills ${dir} by ${pct(Math.abs(delta.frontier),1)} pp. ` +
-    `Digital shifted ${pct(delta.digital,1)} pp. Manual: ${pct(delta.manual,1)} pp.`;
+    `Frontier skills ${dir} by ${(Math.abs(delta.frontier)*100).toFixed(1)} pp. ` +
+    `Digital shifted ${(delta.digital*100).toFixed(1)} pp. Manual: ${(delta.manual*100).toFixed(1)} pp.`;
 
   const noData = `<li style="color:#94a3b8;font-style:italic">Not available</li>`;
   document.getElementById("frontierList").innerHTML =

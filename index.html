@@ -228,16 +228,22 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
       <button class="tab-btn" onclick="switchTab('employment',this)">Employment Lens</button>
     </div>
 
-    <!-- Shared: Occupation level — visible on both tabs -->
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 16px 10px;border-bottom:1px solid #f1f5f9">
-      <span style="font-size:.8rem;font-weight:600;color:#374151;display:flex;align-items:center;gap:4px">
-        Occupation level
-        <span style="cursor:help;color:#94a3b8;font-size:.8rem" title="Occupations are classified according to the KldB – Klassifizierung der Berufe 2010 (Federal Employment Agency, Germany). Analyses are shown at the 2-, 3-, and 5-digit KldB levels.">ⓘ</span>
-      </span>
-      <div class="btn-group">
-        <button class="btn btn-sm active" id="lvl2d" onclick="setLevel('2d')">2-digit</button>
-        <button class="btn btn-sm" id="lvl3d" onclick="setLevel('3d')">3-digit</button>
-        <button class="btn btn-sm" id="lvl5d" onclick="setLevel('5d')">5-digit</button>
+    <!-- Shared controls — visible on both tabs -->
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:8px 16px 10px;border-bottom:1px solid #f1f5f9">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="font-size:.8rem;font-weight:600;color:#374151;display:flex;align-items:center;gap:4px">
+          Occupation level
+          <span style="cursor:help;color:#94a3b8;font-size:.8rem" title="Occupations are classified according to the KldB – Klassifizierung der Berufe 2010 (Federal Employment Agency, Germany). Analyses are shown at the 2-, 3-, and 5-digit KldB levels.">ⓘ</span>
+        </span>
+        <div class="btn-group">
+          <button class="btn btn-sm active" id="lvl2d" onclick="setLevel('2d')">2-digit</button>
+          <button class="btn btn-sm" id="lvl3d" onclick="setLevel('3d')">3-digit</button>
+          <button class="btn btn-sm" id="lvl5d" onclick="setLevel('5d')">5-digit</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:.8rem;font-weight:600;color:#374151;white-space:nowrap">Min. employment: <span id="minEmpLabel">0</span></span>
+        <input class="slider" type="range" min="0" max="4000000" step="50000" value="0" id="minEmpSlider" oninput="onMinEmp(this.value)" style="width:140px">
       </div>
     </div>
 
@@ -260,10 +266,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
           <div class="filter-section">
             <div class="filter-label">Search</div>
             <input class="search-input" type="text" id="searchInput" placeholder="Title or code…" oninput="onSearch(this.value)">
-          </div>
-          <div class="filter-section">
-            <div class="filter-label">Min. employment: <span id="minEmpLabel">0</span></div>
-            <input class="slider" type="range" min="0" max="4000000" step="50000" value="0" id="minEmpSlider" oninput="onMinEmp(this.value)">
           </div>
           <div class="filter-section">
             <div class="filter-label">Show</div>

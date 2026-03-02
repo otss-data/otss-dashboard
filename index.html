@@ -291,8 +291,16 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
     <!-- Employment Lens -->
     <div id="tab-employment" class="tab-pane">
       <div style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="font-size:.8rem;font-weight:600;color:#374151">X-axis (Δ share):</span>
+          <div class="btn-group">
+            <button class="btn btn-sm active" id="sm-frontier" onclick="setScatterMetric('frontier')">Frontier</button>
+            <button class="btn btn-sm"        id="sm-digital"  onclick="setScatterMetric('digital')">Digital</button>
+            <button class="btn btn-sm"        id="sm-manual"   onclick="setScatterMetric('manual')">Manual</button>
+          </div>
+        </div>
         <span class="stat-chip" id="avgDeltaStat">Avg &#916; Frontier: –</span>
-        <p style="font-size:.8rem;color:#64748b;margin-top:8px">Each bubble is an occupation. X&nbsp;= Δ&nbsp;frontier share (2012→2023), Y&nbsp;= employment growth rate, bubble area&nbsp;∝ 2023 employment. Click a bubble for details.</p>
+        <p id="scatterDesc" style="font-size:.8rem;color:#64748b;margin-top:8px">Each bubble is an occupation. X&nbsp;= Δ&nbsp;frontier share (2012→2023), Y&nbsp;= employment growth rate, bubble area&nbsp;∝ 2023 employment. Click a bubble for details.</p>
       </div>
       <div class="chart-wrap" style="height:380px">
         <canvas id="scatterChart"></canvas>
@@ -356,7 +364,7 @@ const PAPER_SNAPSHOT = {
 };
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
-const st = { year:2023, weighted:true, level:"2d", search:"", minEmp:0, sortBy:"frontier", snapshotSegment:"total", topN:null };
+const st = { year:2023, weighted:true, level:"2d", search:"", minEmp:0, sortBy:"frontier", snapshotSegment:"total", topN:null, scatterMetric:"frontier" };
 let charts = {};
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -590,12 +598,15 @@ function renderRanking(rows) {
 
 function renderScatter(rows) {
   const wkey = st.weighted ? "weighted" : "unweighted";
+  const metric = st.scatterMetric;
+  const mLabel = metric[0].toUpperCase() + metric.slice(1);
+  const mColor = C[metric];
 
   // Only include occupations with valid shares in BOTH years
   const valid = rows.filter(r => {
     const s12 = r[wkey]?.shares_2012;
     const s23 = r[wkey]?.shares_2023;
-    return s12?.frontier != null && s23?.frontier != null
+    return s12?.[metric] != null && s23?.[metric] != null
         && r.employment_2012 != null && r.employment_2023 != null;
   });
 
@@ -604,29 +615,38 @@ function renderScatter(rows) {
   const empScale = st.level === "2d" ? 5000 : st.level === "3d" ? 2500 : 300;
 
   const pts = valid.map(r=>({
-    x: r[wkey].shares_2023.frontier - r[wkey].shares_2012.frontier,
+    x: r[wkey].shares_2023[metric] - r[wkey].shares_2012[metric],
     y: growthRate(r.employment_2012,r.employment_2023),
     r: Math.max(4, Math.min(28, Math.sqrt(r.employment_2023 / empScale))),
     _occ: r
   }));
   const avg = pts.length ? pts.reduce((s,p)=>s+p.x,0)/pts.length : 0;
-  document.getElementById("avgDeltaStat").textContent = `Avg \u0394 Frontier: ${pct(avg,1)}`;
+  document.getElementById("avgDeltaStat").textContent = `Avg \u0394 ${mLabel}: ${pct(avg,1)}`;
+  document.getElementById("scatterDesc").textContent =
+    `Each bubble is an occupation. X = \u0394\u00a0${mLabel.toLowerCase()} share (2012\u21922023), Y = employment growth rate, bubble area \u221d 2023 employment. Click a bubble for details.`;
 
+  // Fixed x range for frontier (matches paper); auto for others
+  const xScale = metric === "frontier"
+    ? { min:-0.10, max:0.30, title:{display:true,text:`\u0394 ${mLabel} share (2012\u21922023)`}, ticks:{callback:v=>pct(v,0)} }
+    : { title:{display:true,text:`\u0394 ${mLabel} share (2012\u21922023)`}, ticks:{callback:v=>pct(v,0)} };
+
+  // Destroy and recreate so axis options (range, labels, color) update cleanly
+  if (charts.scatterChart) { charts.scatterChart.destroy(); delete charts.scatterChart; }
   const ch = upsertChart("scatterChart",{
     type:"bubble",
     data:{datasets:[{
       label:"Occupations", data:pts,
-      backgroundColor:C.frontier+"BB", borderColor:C.frontier, borderWidth:1
+      backgroundColor:mColor+"BB", borderColor:mColor, borderWidth:1
     }]},
     options:{
       responsive:true, maintainAspectRatio:false,
       scales:{
-        x:{min:-0.10,max:0.30,title:{display:true,text:"Δ Frontier share (2012→2023)"},ticks:{callback:v=>pct(v,0)}},
+        x: xScale,
         y:{title:{display:true,text:"Employment growth rate"},ticks:{callback:v=>pct(v,0)}}
       },
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>{
         const p=c.raw;
-        return [`${p._occ.title}`,`Δ Frontier: ${pct(p.x,1)}`,`Emp growth: ${pct(p.y,1)}`,`Employment 2023: ${fmtN(p._occ.employment_2023)}`];
+        return [`${p._occ.title}`,`\u0394 ${mLabel}: ${pct(p.x,1)}`,`Emp growth: ${pct(p.y,1)}`,`Employment 2023: ${fmtN(p._occ.employment_2023)}`];
       }}}},
       onClick:(_,els)=>{ if(els.length) openDetail(ch._pts[els[0].index]._occ); }
     }
@@ -732,6 +752,13 @@ function onMinEmp(v) {
   render();
 }
 function onSort(v) { st.sortBy=v; render(); }
+function setScatterMetric(m) {
+  st.scatterMetric = m;
+  ["frontier","digital","manual"].forEach(k =>
+    document.getElementById("sm-"+k).classList.toggle("active", k===m)
+  );
+  render();
+}
 document.getElementById("toggleWeighting").addEventListener("change", e => {
   st.weighted = e.target.checked; render();
 });

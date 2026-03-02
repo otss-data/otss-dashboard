@@ -269,13 +269,22 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
             <div class="filter-label">Show</div>
             <div class="btn-group">
               <button class="btn btn-sm" id="topN10"  onclick="setTopN(10)">Top 10</button>
-              <button class="btn btn-sm" id="topN20"  onclick="setTopN(20)">Top 20</button>
               <button class="btn btn-sm" id="topN50"  onclick="setTopN(50)">Top 50</button>
+              <button class="btn btn-sm" id="topN100" onclick="setTopN(100)">Top 100</button>
               <button class="btn btn-sm active" id="topNall" onclick="setTopN(null)">All</button>
             </div>
           </div>
           <div class="filter-section">
-            <div class="filter-label">Sort by</div>
+            <div class="filter-label">Select top N by</div>
+            <div class="radio-group">
+              <label class="radio-option"><input type="radio" name="selectBy" value="frontier" checked onchange="onSelectBy('frontier')"> Frontier share</label>
+              <label class="radio-option"><input type="radio" name="selectBy" value="digital" onchange="onSelectBy('digital')"> Digital share</label>
+              <label class="radio-option"><input type="radio" name="selectBy" value="manual" onchange="onSelectBy('manual')"> Manual share</label>
+              <label class="radio-option"><input type="radio" name="selectBy" value="employment" onchange="onSelectBy('employment')"> Employment size</label>
+            </div>
+          </div>
+          <div class="filter-section">
+            <div class="filter-label">Then rank by</div>
             <div class="radio-group">
               <label class="radio-option"><input type="radio" name="sortBy" value="frontier" checked onchange="onSort('frontier')"> Frontier share</label>
               <label class="radio-option"><input type="radio" name="sortBy" value="digital" onchange="onSort('digital')"> Digital share</label>
@@ -364,7 +373,7 @@ const PAPER_SNAPSHOT = {
 };
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
-const st = { year:2023, weighted:true, level:"2d", search:"", minEmp:0, sortBy:"frontier", snapshotSegment:"total", topN:null, scatterMetric:"frontier" };
+const st = { year:2023, weighted:true, level:"2d", search:"", minEmp:0, selectBy:"frontier", sortBy:"frontier", snapshotSegment:"total", topN:null, scatterMetric:"frontier" };
 let charts = {};
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -554,17 +563,26 @@ function renderRanking(rows) {
   const wkey = st.weighted ? "weighted" : "unweighted";
   const skey = st.year===2012 ? "shares_2012":"shares_2023";
   const shares = r => r[wkey][skey];
-  const getSV = r => st.sortBy==="employment" ? (st.year===2012?r.employment_2012:r.employment_2023)
-                   : st.sortBy==="digital"    ? shares(r).digital
-                   : st.sortBy==="manual"     ? shares(r).manual
-                   : shares(r).frontier;
-  const sorted = [...rows].sort((a,b)=>getSV(b)-getSV(a));
+  const metricVal = (r, by) => by==="employment" ? (st.year===2012?r.employment_2012:r.employment_2023)
+                              : by==="digital"    ? shares(r).digital
+                              : by==="manual"     ? shares(r).manual
+                              : shares(r).frontier;
 
-  const display = (st.topN && sorted.length > st.topN) ? sorted.slice(0, st.topN) : sorted;
+  // Step 1: sort by selectBy to determine who makes the top-N cut
+  const bySelect = [...rows].sort((a,b)=>metricVal(b,st.selectBy)-metricVal(a,st.selectBy));
+  const cut = (st.topN && bySelect.length > st.topN) ? bySelect.slice(0, st.topN) : bySelect;
+
+  // Step 2: re-sort the cut by sortBy for display
+  const display = [...cut].sort((a,b)=>metricVal(b,st.sortBy)-metricVal(a,st.sortBy));
 
   const noteEl = document.getElementById("rankingNote");
-  if (display.length < sorted.length) {
-    noteEl.textContent = `Top ${display.length} of ${sorted.length} shown`;
+  if (cut.length < rows.length) {
+    const selectLabel = {frontier:"frontier share",digital:"digital share",manual:"manual share",employment:"employment"}[st.selectBy];
+    const sortLabel   = {frontier:"frontier share",digital:"digital share",manual:"manual share",employment:"employment"}[st.sortBy];
+    const note = st.selectBy === st.sortBy
+      ? `Top ${cut.length} of ${rows.length} shown`
+      : `Top ${cut.length} of ${rows.length} by ${selectLabel}, ranked by ${sortLabel}`;
+    noteEl.textContent = note;
     noteEl.style.display = "block";
   } else {
     noteEl.style.display = "none";
@@ -733,15 +751,15 @@ function setLevel(l) {
   document.getElementById("lvl2d").classList.toggle("active", l==="2d");
   document.getElementById("lvl3d").classList.toggle("active", l==="3d");
   document.getElementById("lvl5d").classList.toggle("active", l==="5d");
-  // 5-digit has 1000+ occupations; cap default to Top 50 to avoid canvas overflow
-  if (l === "5d" && st.topN === null) setTopN(50);
+  // 5-digit has 1000+ occupations; cap default to Top 100 to avoid canvas overflow
+  if (l === "5d" && st.topN === null) setTopN(100);
   loadLevel(l);
 }
 function setTopN(n) {
   st.topN = n;
   document.getElementById("topN10").classList.toggle("active", n===10);
-  document.getElementById("topN20").classList.toggle("active", n===20);
   document.getElementById("topN50").classList.toggle("active", n===50);
+  document.getElementById("topN100").classList.toggle("active", n===100);
   document.getElementById("topNall").classList.toggle("active", n===null);
   render();
 }
@@ -751,6 +769,7 @@ function onMinEmp(v) {
   document.getElementById("minEmpLabel").textContent = +v===0 ? "0" : fmtN(+v);
   render();
 }
+function onSelectBy(v) { st.selectBy=v; render(); }
 function onSort(v) { st.sortBy=v; render(); }
 function setScatterMetric(m) {
   st.scatterMetric = m;

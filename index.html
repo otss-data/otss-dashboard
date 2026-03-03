@@ -129,22 +129,50 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
   </div>
 
   <!-- ── Sticky global controls ── -->
-  <div class="sticky-bar">
-    <span class="sticky-bar-label">&#9881; Global settings &mdash; apply to all views</span>
-    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
-      <div class="ctrl ctrl-global">
-        <span class="ctrl-label">Employment-weighted</span>
-        <label class="toggle">
-          <input type="checkbox" id="toggleWeighting" checked>
-          <span class="toggle-track"></span>
-        </label>
+  <div class="sticky-bar" style="flex-direction:column;align-items:stretch;gap:12px">
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px">
+      <span class="sticky-bar-label">&#9881; Global settings &mdash; apply to all views</span>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <div class="ctrl ctrl-global">
+          <span class="ctrl-label">Employment-weighted</span>
+          <label class="toggle">
+            <input type="checkbox" id="toggleWeighting" checked>
+            <span class="toggle-track"></span>
+          </label>
+        </div>
+        <div class="ctrl">
+          <span class="ctrl-label">Year</span>
+          <button class="btn btn-sm" id="btn2012" onclick="setYear(2012)">2012</button>
+          <button class="btn btn-sm active" id="btn2023" onclick="setYear(2023)">2023</button>
+        </div>
+        <button class="btn" onclick="exportJSON()">&#8595; Export JSON</button>
       </div>
-      <div class="ctrl">
-        <span class="ctrl-label">Year</span>
-        <button class="btn btn-sm" id="btn2012" onclick="setYear(2012)">2012</button>
-        <button class="btn btn-sm active" id="btn2023" onclick="setYear(2023)">2023</button>
+    </div>
+    <div style="border-top:1px solid #f1f5f9;padding-top:10px">
+      <div style="font-size:.7rem;font-weight:600;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Measure definitions</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div>
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
+            <span style="width:10px;height:10px;background:#7F807F;display:inline-block;border-radius:2px;flex-shrink:0"></span>
+            <span style="font-size:.78rem;font-weight:600;color:#374151">Manual</span>
+          </div>
+          <div style="font-size:.76rem;color:#64748b;line-height:1.45">Skills to operate work processes <em>without</em> digital support — manually controlled equipment or non-IT-supported tools. Typical of work before the Digital Revolution (1st &amp; 2nd Industrial Revolutions).</div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
+            <span style="width:10px;height:10px;background:#1F78B4;display:inline-block;border-radius:2px;flex-shrink:0"></span>
+            <span style="font-size:.78rem;font-weight:600;color:#374151">Digital</span>
+          </div>
+          <div style="font-size:.76rem;color:#64748b;line-height:1.45">Skills to use digital/IT tools that support or indirectly manage the work process — e.g. CRM software, ERP systems, CNC machines. Computerisation wave from the 1970s onward (3rd Industrial Revolution).</div>
+        </div>
+        <div>
+          <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
+            <span style="width:10px;height:10px;background:#B2DF8A;display:inline-block;border-radius:2px;flex-shrink:0"></span>
+            <span style="font-size:.78rem;font-weight:600;color:#374151">Frontier</span>
+          </div>
+          <div style="font-size:.76rem;color:#64748b;line-height:1.45">Skills to use the most advanced technologies — e.g. machine learning, AI systems, collaborative robots, digital twins. Fourth Industrial Revolution since the late 2000s.</div>
+        </div>
       </div>
-      <button class="btn" onclick="exportJSON()">&#8595; Export JSON</button>
     </div>
   </div>
 
@@ -220,32 +248,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
             <span style="cursor:help;color:#94a3b8;font-size:.8rem" title="Manual: skills without digital support (pre-digital era). Digital: skills using IT/digital tools that support the work process (3rd Industrial Revolution, 1970s+). Frontier: skills for the most advanced technologies — AI, machine learning, collaborative robots (4th Industrial Revolution, late 2000s+). Source: Genz, Gregory &amp; Lehmer (2026).">ⓘ</span>
           </div>
           <div id="val-interp" style="font-size:.88rem;font-weight:600;color:#334155;margin-top:8px;line-height:1.5;flex:1">–</div>
-        </div>
-      </div>
-      <div style="margin-top:16px;border-top:1px solid #f1f5f9;padding-top:12px">
-        <div style="font-size:.7rem;font-weight:600;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Measure definitions</div>
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-          <div>
-            <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
-              <span style="width:10px;height:10px;background:#7F807F;display:inline-block;border-radius:2px;flex-shrink:0"></span>
-              <span style="font-size:.78rem;font-weight:600;color:#374151">Manual</span>
-            </div>
-            <div style="font-size:.76rem;color:#64748b;line-height:1.45">Skills to operate work processes <em>without</em> digital support — manually controlled equipment or non-IT-supported tools. Typical of work before the Digital Revolution (1st &amp; 2nd Industrial Revolutions).</div>
-          </div>
-          <div>
-            <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
-              <span style="width:10px;height:10px;background:#1F78B4;display:inline-block;border-radius:2px;flex-shrink:0"></span>
-              <span style="font-size:.78rem;font-weight:600;color:#374151">Digital</span>
-            </div>
-            <div style="font-size:.76rem;color:#64748b;line-height:1.45">Skills to use digital/IT tools that support or indirectly manage the work process — e.g. CRM software, ERP systems, CNC machines. Computerisation wave from the 1970s onward (3rd Industrial Revolution).</div>
-          </div>
-          <div>
-            <div style="display:flex;align-items:center;gap:5px;margin-bottom:3px">
-              <span style="width:10px;height:10px;background:#B2DF8A;display:inline-block;border-radius:2px;flex-shrink:0"></span>
-              <span style="font-size:.78rem;font-weight:600;color:#374151">Frontier</span>
-            </div>
-            <div style="font-size:.76rem;color:#64748b;line-height:1.45">Skills to use the most advanced technologies — e.g. machine learning, AI systems, collaborative robots, digital twins. Fourth Industrial Revolution since the late 2000s.</div>
-          </div>
         </div>
       </div>
     </div>

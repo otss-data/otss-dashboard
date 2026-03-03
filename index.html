@@ -109,6 +109,11 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
 
 /* Footer */
 .footer{margin-top:24px;padding:14px 16px;background:#fefce8;border:1px solid #fde047;border-radius:12px;font-size:.8rem;color:#713f12}
+
+/* Sticky global controls bar */
+.sticky-bar{position:sticky;top:0;z-index:50;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:10px 16px;margin-bottom:20px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.sticky-bar-label{font-size:.7rem;font-weight:600;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-right:4px}
+.ctrl-global .ctrl-label{font-size:.8rem;font-weight:600;color:#1e293b}
 </style>
 </head>
 <body>
@@ -120,10 +125,14 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
       <h1>Occupational Technology Skill Shares (OTSS) <span class="badge">Dashboard</span></h1>
       <p class="header-desc">Explore occupational skill shares by technology class (manual, digital, frontier), their change over time, and how frontier shifts relate to employment growth.</p>
       <p class="header-desc" style="margin-top:6px">Data and classification based on: Genz, S., Gregory, T. &amp; Lehmer, F. (2026). <a href="https://www.dropbox.com/scl/fi/z6ly2ih4ezpf0yv86m2if/Genz_Gregory_Lehmer_2026_Fiscal_Studies.pdf?rlkey=1v5hah8lavj5chpcb5f2wvs4f&amp;e=1&amp;dl=0" target="_blank" style="color:inherit;text-decoration:underline"><em>AI-Powered Skill Classification: Mapping Technology Intensity in the German Labour Market.</em></a> Fiscal Studies, <em>forthcoming.</em></p>
-  
     </div>
-    <div class="header-controls">
-      <div class="ctrl">
+  </div>
+
+  <!-- ── Sticky global controls ── -->
+  <div class="sticky-bar">
+    <span class="sticky-bar-label">&#9881; Global settings &mdash; apply to all views</span>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <div class="ctrl ctrl-global">
         <span class="ctrl-label">Employment-weighted</span>
         <label class="toggle">
           <input type="checkbox" id="toggleWeighting" checked>
@@ -139,23 +148,48 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
     </div>
   </div>
 
-  <!-- ── Snapshot ── -->
-  <div class="card" style="margin-bottom:20px">
-    <div class="card-header" style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:flex-start">
-      <div>
-        <div class="card-title">Snapshot</div>
-        <div class="card-desc">Economy-wide technology composition (manual/digital/frontier). Toggle year and weighting above.</div>
+  <!-- ── Main card (3 tabs) ── -->
+  <div class="card">
+    <div class="tabs-nav" style="padding-top:12px">
+      <button class="tab-btn active" onclick="switchTab('snapshot',this)">Snapshot / Overview</button>
+      <button class="tab-btn" onclick="switchTab('distribution',this)">Occupational Distribution</button>
+      <button class="tab-btn" onclick="switchTab('employment',this)">Employment Lens</button>
+    </div>
+
+    <!-- Shared controls — visible on Distribution and Employment tabs only -->
+    <div id="shared-controls" style="display:none;align-items:center;gap:20px;flex-wrap:wrap;padding:8px 16px 10px;border-bottom:1px solid #f1f5f9">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span style="font-size:.8rem;font-weight:600;color:#374151;display:flex;align-items:center;gap:4px">
+          Occupation level
+          <span style="cursor:help;color:#94a3b8;font-size:.8rem" title="Occupations are classified according to the KldB – Klassifizierung der Berufe 2010 (Federal Employment Agency, Germany). Analyses are shown at the 2-, 3-, and 5-digit KldB levels.">ⓘ</span>
+        </span>
+        <div class="btn-group">
+          <button class="btn btn-sm active" id="lvl2d" onclick="setLevel('2d')">2-digit</button>
+          <button class="btn btn-sm" id="lvl3d" onclick="setLevel('3d')">3-digit</button>
+          <button class="btn btn-sm" id="lvl5d" onclick="setLevel('5d')">5-digit</button>
+        </div>
       </div>
-      <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
-        <span style="font-size:.75rem;color:#64748b">Segment:</span>
-        <button class="btn btn-sm active" id="seg-total"      onclick="setSnapshotSegment('total',this)">Total</button>
-        <button class="btn btn-sm"        id="seg-production" onclick="setSnapshotSegment('production',this)">Production</button>
-        <button class="btn btn-sm"        id="seg-service"    onclick="setSnapshotSegment('service',this)">Service</button>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:.8rem;font-weight:600;color:#374151;white-space:nowrap">Min. employment: <span id="minEmpLabel" style="display:inline-block;min-width:68px">0</span></span>
+        <input class="slider" type="range" min="0" max="4000000" step="50000" value="0" id="minEmpSlider" oninput="onMinEmp(this.value)" style="width:140px">
       </div>
     </div>
-    <div class="card-body">
+
+    <!-- Snapshot / Overview tab -->
+    <div id="tab-snapshot" class="tab-pane active">
+      <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+        <div>
+          <div class="card-title">Economy-wide technology composition</div>
+          <div class="card-desc">Manual / digital / frontier skill shares. Year and weighting controlled by the global bar above.</div>
+        </div>
+        <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
+          <span style="font-size:.75rem;color:#64748b">Segment:</span>
+          <button class="btn btn-sm active" id="seg-total"      onclick="setSnapshotSegment('total',this)">Total</button>
+          <button class="btn btn-sm"        id="seg-production" onclick="setSnapshotSegment('production',this)">Production</button>
+          <button class="btn btn-sm"        id="seg-service"    onclick="setSnapshotSegment('service',this)">Service</button>
+        </div>
+      </div>
       <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
-        <!-- Metrics + chart -->
         <div style="flex:1;min-width:260px">
           <div class="snapshot-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:10px">
             <div class="metric">
@@ -171,7 +205,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
               <div class="metric-value" id="val-frontier">–</div>
             </div>
           </div>
-          <!-- Chart legend -->
           <div style="display:flex;gap:16px;margin-bottom:8px;font-size:.78rem;color:#475569;align-items:center">
             <span style="display:flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:#7F807F;display:inline-block;border-radius:2px;flex-shrink:0"></span>Manual</span>
             <span style="display:flex;align-items:center;gap:5px"><span style="width:13px;height:13px;background:#1F78B4;display:inline-block;border-radius:2px;flex-shrink:0"></span>Digital</span>
@@ -181,7 +214,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
             <canvas id="snapshotChart"></canvas>
           </div>
         </div>
-        <!-- Interpretation box -->
         <div class="metric" style="min-width:200px;max-width:280px;align-self:stretch;display:flex;flex-direction:column">
           <div class="metric-label" style="display:flex;align-items:center;gap:4px">
             Interpretation
@@ -190,8 +222,6 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
           <div id="val-interp" style="font-size:.88rem;font-weight:600;color:#334155;margin-top:8px;line-height:1.5;flex:1">–</div>
         </div>
       </div>
-
-      <!-- Measure definitions -->
       <div style="margin-top:16px;border-top:1px solid #f1f5f9;padding-top:12px">
         <div style="font-size:.7rem;font-weight:600;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Measure definitions</div>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
@@ -219,36 +249,9 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- ── Tabs ── -->
-  <div class="card">
-    <div class="tabs-nav" style="padding-top:12px">
-      <button class="tab-btn active" onclick="switchTab('distribution',this)">Occupational Distribution</button>
-      <button class="tab-btn" onclick="switchTab('employment',this)">Employment Lens</button>
-    </div>
-
-    <!-- Shared controls — visible on both tabs -->
-    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:8px 16px 10px;border-bottom:1px solid #f1f5f9">
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-        <span style="font-size:.8rem;font-weight:600;color:#374151;display:flex;align-items:center;gap:4px">
-          Occupation level
-          <span style="cursor:help;color:#94a3b8;font-size:.8rem" title="Occupations are classified according to the KldB – Klassifizierung der Berufe 2010 (Federal Employment Agency, Germany). Analyses are shown at the 2-, 3-, and 5-digit KldB levels.">ⓘ</span>
-        </span>
-        <div class="btn-group">
-          <button class="btn btn-sm active" id="lvl2d" onclick="setLevel('2d')">2-digit</button>
-          <button class="btn btn-sm" id="lvl3d" onclick="setLevel('3d')">3-digit</button>
-          <button class="btn btn-sm" id="lvl5d" onclick="setLevel('5d')">5-digit</button>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span style="font-size:.8rem;font-weight:600;color:#374151;white-space:nowrap">Min. employment: <span id="minEmpLabel">0</span></span>
-        <input class="slider" type="range" min="0" max="4000000" step="50000" value="0" id="minEmpSlider" oninput="onMinEmp(this.value)" style="width:140px">
-      </div>
-    </div>
 
     <!-- Distribution -->
-    <div id="tab-distribution" class="tab-pane active">
+    <div id="tab-distribution" class="tab-pane">
       <div class="dist-layout">
         <div>
           <div class="legend">
@@ -795,6 +798,9 @@ function switchTab(tab, btn) {
   document.querySelectorAll(".tab-btn").forEach(el=>el.classList.remove("active"));
   document.getElementById("tab-"+tab).classList.add("active");
   btn.classList.add("active");
+  // Shared controls (occupation level + min employment) only relevant outside Snapshot
+  const sc = document.getElementById("shared-controls");
+  sc.style.display = tab === "snapshot" ? "none" : "flex";
 }
 
 // ─── EXPORT ──────────────────────────────────────────────────────────────────

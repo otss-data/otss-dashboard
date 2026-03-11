@@ -371,10 +371,12 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
       <p class="summary-text" id="drawerSummary"></p>
     </div>
     <div>
-      <div class="section-label">Top frontier skills (2023)</div>
-      <ul class="skills-list" id="frontierList"></ul>
-      <div class="section-label" style="margin-top:14px">Top digital skills (2023)</div>
-      <ul class="skills-list" id="digitalList"></ul>
+      <div id="skillsSection">
+        <div class="section-label">Top frontier skills (2023)</div>
+        <ul class="skills-list" id="frontierList"></ul>
+        <div class="section-label" style="margin-top:14px">Top digital skills (2023)</div>
+        <ul class="skills-list" id="digitalList"></ul>
+      </div>
       <button class="btn btn-full" id="dlOccBtn" style="margin-top:16px">&#8595; Download occupation JSON</button>
     </div>
   </div>
@@ -762,13 +764,19 @@ function openDetail(occ, list, idx) {
       `No values available for ${missing}. Changes cannot be computed.`;
   }
 
-  const noData = `<li style="color:#94a3b8;font-style:italic">Not available</li>`;
-  document.getElementById("frontierList").innerHTML =
-    (occ.top_frontier_skills_2023||[]).length
-      ? occ.top_frontier_skills_2023.map(s=>`<li>${s}</li>`).join("") : noData;
-  document.getElementById("digitalList").innerHTML =
-    (occ.top_digital_skills_2023||[]).length
-      ? occ.top_digital_skills_2023.map(s=>`<li>${s}</li>`).join("") : noData;
+  const skillsSection = document.getElementById("skillsSection");
+  if (occ.level === "5d") {
+    skillsSection.style.display = "";
+    const toBeAdded = `<li style="color:#94a3b8;font-style:italic">To be added</li>`;
+    document.getElementById("frontierList").innerHTML =
+      (occ.top_frontier_skills_2023||[]).length
+        ? occ.top_frontier_skills_2023.map(s=>`<li>${s}</li>`).join("") : toBeAdded;
+    document.getElementById("digitalList").innerHTML =
+      (occ.top_digital_skills_2023||[]).length
+        ? occ.top_digital_skills_2023.map(s=>`<li>${s}</li>`).join("") : toBeAdded;
+  } else {
+    skillsSection.style.display = "none";
+  }
 
   // Detail chart — pass null for missing years; Chart.js will leave that bar empty
   if (charts.detail) { charts.detail.destroy(); delete charts.detail; }

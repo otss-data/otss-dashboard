@@ -117,6 +117,19 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
 .sticky-bar{position:sticky;top:0;z-index:50;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:10px 16px;margin-bottom:20px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
 .sticky-bar-label{font-size:.7rem;font-weight:600;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-right:4px}
 .ctrl-global .ctrl-label{font-size:.8rem;font-weight:600;color:#1e293b}
+
+/* ── Guided tour ── */
+.tour-highlight{position:fixed;z-index:1000;border-radius:12px;box-shadow:0 0 0 4px rgba(30,41,59,.55),0 0 0 9999px rgba(15,23,42,.55);pointer-events:none;transition:all .25s ease}
+.tour-pop{position:fixed;z-index:1001;width:320px;max-width:calc(100vw - 32px);background:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.28);padding:18px 20px 16px;opacity:0;transform:translateY(4px);transition:opacity .2s ease,transform .2s ease}
+.tour-pop.show{opacity:1;transform:translateY(0)}
+.tour-pop .tour-step{font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#94a3b8;margin-bottom:6px}
+.tour-pop .tour-title{font-size:1.05rem;font-weight:700;color:#1e293b;margin-bottom:6px;line-height:1.3}
+.tour-pop .tour-body{font-size:.85rem;color:#475569;line-height:1.55}
+.tour-pop .tour-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:16px}
+.tour-pop .tour-skip{background:none;border:none;color:#94a3b8;font-size:.8rem;cursor:pointer;padding:4px}
+.tour-pop .tour-skip:hover{color:#64748b}
+.tour-pop .tour-nav{display:flex;gap:8px}
+.tour-arrow{position:fixed;z-index:1001;width:14px;height:14px;background:#fff;transform:rotate(45deg);box-shadow:0 12px 40px rgba(0,0,0,.28)}
 </style>
 </head>
 <body>
@@ -135,7 +148,8 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
   <div class="sticky-bar" style="flex-direction:column;align-items:stretch;gap:12px">
     <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px">
       <span class="sticky-bar-label">&#9881; Global settings &mdash; apply to all views</span>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+      <div id="globalCtrls" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+        <button class="btn" id="tourBtn" onclick="startTour()" title="Guided walkthrough of the dashboard">&#127909; Take a tour</button>
         <div class="ctrl ctrl-global">
           <span class="ctrl-label">Employment-weighted</span>
           <label class="toggle">
@@ -151,7 +165,7 @@ body{font-family:system-ui,-apple-system,sans-serif;background:#f8fafc;color:#1e
         <button class="btn" onclick="exportJSON()">&#8595; Export JSON</button>
       </div>
     </div>
-    <div style="border-top:1px solid #f1f5f9;padding-top:10px">
+    <div id="measureDefs" style="border-top:1px solid #f1f5f9;padding-top:10px">
       <div style="font-size:.7rem;font-weight:600;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Measure definitions</div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
         <div>
@@ -880,9 +894,170 @@ function exportSchema() { dlJSON("data-schema.json",{fields:[
   {name:"top_frontier_skills_2023",type:"array"},{name:"top_digital_skills_2023",type:"array"}
 ]}); }
 
+// ─── GUIDED TOUR ───────────────────────────────────────────────────────────────
+const TOUR_STEPS = [
+  { el:".header h1", placement:"bottom",
+    title:"Welcome to the OTSS Dashboard",
+    body:"This quick tour shows you how to explore how occupations rely on manual, digital and frontier technologies. Use <b>Next</b> / <b>Back</b>, or <b>Skip</b> to exit anytime." },
+  { el:"#measureDefs", placement:"bottom",
+    title:"Three technology classes",
+    body:"Every skill is classified as <b>Manual</b>, <b>Digital</b>, or <b>Frontier</b>. These colour-coded definitions apply across every chart in the dashboard." },
+  { el:"#globalCtrls", placement:"bottom",
+    title:"Global settings",
+    body:"Toggle <b>employment-weighted</b> vs. unweighted averages, pick the <b>year</b> (2012 or 2023), and <b>export</b> the current data as JSON. These choices apply to all views." },
+  { el:".tabs-nav", placement:"bottom",
+    title:"Three views",
+    body:"<b>Snapshot</b> gives the economy-wide picture, <b>Occupational Distribution</b> ranks individual occupations, and the <b>Employment Lens</b> relates skill change to job growth." },
+  { tab:"snapshot", el:"#tab-snapshot", placement:"top",
+    title:"Snapshot metrics",
+    body:"The headline manual / digital / frontier shares, a comparison bar for Total / Production / Service, and a plain-language interpretation on the right." },
+  { tab:"distribution", el:"#rankingWrap", placement:"top",
+    title:"Occupation ranking",
+    body:"Each stacked bar is an occupation. <b>Click any bar</b> to open a detailed breakdown with the 2012→2023 change and top skills." },
+  { tab:"distribution", el:".filter-card", placement:"left",
+    title:"Filter &amp; rank",
+    body:"Search by title or code, choose how many occupations to show, and control which measure decides the top-N cut and the sort order." },
+  { tab:"distribution", el:"#shared-controls", placement:"bottom",
+    title:"Occupation level &amp; size",
+    body:"Switch between 2-, 3- and 5-digit occupation groups, and hide small occupations with the minimum-employment slider." },
+  { tab:"employment", el:"#tab-employment", placement:"top",
+    title:"Employment lens",
+    body:"Each bubble is an occupation: <b>x</b> = change in skill share (2012→2023), <b>y</b> = employment growth, <b>size</b> = employment. Click a bubble for details." },
+  { tab:"snapshot", el:"#tourBtn", placement:"bottom",
+    title:"You're all set",
+    body:"You can re-launch this tour anytime from here. Enjoy exploring the data!" },
+];
+
+let _tourIdx = -1;
+const _tourEls = {};
+
+function _tourEnsureNodes() {
+  if (_tourEls.hl) return;
+  _tourEls.hl    = Object.assign(document.createElement("div"), { className:"tour-highlight" });
+  _tourEls.arrow = Object.assign(document.createElement("div"), { className:"tour-arrow" });
+  _tourEls.pop   = Object.assign(document.createElement("div"), { className:"tour-pop" });
+  document.body.append(_tourEls.hl, _tourEls.arrow, _tourEls.pop);
+}
+
+function _tourGoTab(tab) {
+  const map = { snapshot:0, distribution:1, employment:2 };
+  const btns = document.querySelectorAll(".tabs-nav .tab-btn");
+  if (btns[map[tab]]) switchTab(tab, btns[map[tab]]);
+}
+
+function _tourPlace() {
+  const step = TOUR_STEPS[_tourIdx];
+  const target = document.querySelector(step.el);
+  const { hl, arrow, pop } = _tourEls;
+  if (!target) return;
+
+  const pad = 6;
+  const r = target.getBoundingClientRect();
+  const top = Math.max(8, r.top - pad), left = Math.max(8, r.left - pad);
+  const w = Math.min(window.innerWidth - left - 8, r.width + pad*2);
+  const h = Math.min(window.innerHeight - top - 8, r.height + pad*2);
+  Object.assign(hl.style, { top:top+"px", left:left+"px", width:w+"px", height:h+"px" });
+
+  const isLast  = _tourIdx === TOUR_STEPS.length - 1;
+  const isFirst = _tourIdx === 0;
+  pop.innerHTML =
+    `<div class="tour-step">Step ${_tourIdx+1} of ${TOUR_STEPS.length}</div>
+     <div class="tour-title">${step.title}</div>
+     <div class="tour-body">${step.body}</div>
+     <div class="tour-actions">
+       <button class="tour-skip" onclick="endTour()">${isLast ? "Close" : "Skip tour"}</button>
+       <div class="tour-nav">
+         ${isFirst ? "" : `<button class="btn btn-sm" onclick="tourStep(-1)">Back</button>`}
+         <button class="btn btn-sm btn-dark" onclick="${isLast ? "endTour()" : "tourStep(1)"}">${isLast ? "Done" : "Next"}</button>
+       </div>
+     </div>`;
+
+  // Measure popover, then position relative to the target
+  pop.style.visibility = "hidden";
+  pop.classList.add("show");
+  const pr = pop.getBoundingClientRect();
+  const gap = 14;
+  let placement = step.placement || "bottom";
+  const vw = window.innerWidth, vh = window.innerHeight;
+
+  // Fall back if there isn't room in the preferred direction
+  if (placement === "bottom" && r.bottom + gap + pr.height > vh) placement = "top";
+  if (placement === "top"    && r.top - gap - pr.height < 0)      placement = "bottom";
+  if (placement === "left"   && r.left - gap - pr.width < 0)      placement = "bottom";
+  if (placement === "right"  && r.right + gap + pr.width > vw)    placement = "bottom";
+
+  let pt, pl;
+  if (placement === "bottom")      { pt = r.bottom + gap;              pl = r.left + r.width/2 - pr.width/2; }
+  else if (placement === "top")    { pt = r.top - gap - pr.height;     pl = r.left + r.width/2 - pr.width/2; }
+  else if (placement === "left")   { pl = r.left - gap - pr.width;     pt = r.top + r.height/2 - pr.height/2; }
+  else                             { pl = r.right + gap;               pt = r.top + r.height/2 - pr.height/2; }
+
+  pl = Math.max(8, Math.min(pl, vw - pr.width - 8));
+  pt = Math.max(8, Math.min(pt, vh - pr.height - 8));
+  Object.assign(pop.style, { top:pt+"px", left:pl+"px", visibility:"visible" });
+
+  // Arrow points from popover toward the target
+  arrow.style.display = "block";
+  if (placement === "bottom")      { arrow.style.top = (pt - 6)+"px";          arrow.style.left = (Math.max(pl+14, Math.min(r.left+r.width/2, pl+pr.width-14)) - 7)+"px"; }
+  else if (placement === "top")    { arrow.style.top = (pt + pr.height - 8)+"px"; arrow.style.left = (Math.max(pl+14, Math.min(r.left+r.width/2, pl+pr.width-14)) - 7)+"px"; }
+  else if (placement === "left")   { arrow.style.left = (pl + pr.width - 8)+"px";  arrow.style.top = (Math.max(pt+14, Math.min(r.top+r.height/2, pt+pr.height-14)) - 7)+"px"; }
+  else                             { arrow.style.left = (pl - 6)+"px";          arrow.style.top = (Math.max(pt+14, Math.min(r.top+r.height/2, pt+pr.height-14)) - 7)+"px"; }
+}
+
+function _tourShow() {
+  const step = TOUR_STEPS[_tourIdx];
+  if (step.tab) _tourGoTab(step.tab);
+  // Let tab switch / chart layout settle, then scroll target into view and place
+  requestAnimationFrame(() => {
+    const target = document.querySelector(step.el);
+    if (target) target.scrollIntoView({ behavior:"smooth", block:"center" });
+    setTimeout(_tourPlace, step.tab ? 260 : 160);
+  });
+}
+
+function tourStep(delta) {
+  const ni = _tourIdx + delta;
+  if (ni < 0 || ni >= TOUR_STEPS.length) return;
+  _tourIdx = ni;
+  _tourShow();
+}
+
+function startTour() {
+  _tourEnsureNodes();
+  _tourIdx = 0;
+  _tourEls.hl.style.display = _tourEls.arrow.style.display = "block";
+  _tourEls.pop.classList.add("show");
+  _tourShow();
+}
+
+function endTour() {
+  _tourIdx = -1;
+  if (_tourEls.hl)  _tourEls.hl.style.display = "none";
+  if (_tourEls.arrow) _tourEls.arrow.style.display = "none";
+  if (_tourEls.pop) _tourEls.pop.classList.remove("show");
+  try { localStorage.setItem("otss_tour_seen", "1"); } catch(_) {}
+}
+
+// Keyboard + resize handling
+document.addEventListener("keydown", e => {
+  if (_tourIdx < 0) return;
+  if (e.key === "Escape") endTour();
+  else if (e.key === "ArrowRight") tourStep(1);
+  else if (e.key === "ArrowLeft")  tourStep(-1);
+});
+window.addEventListener("resize", () => { if (_tourIdx >= 0) _tourPlace(); });
+
+// Auto-launch once for first-time visitors (after data has a moment to load)
+function maybeAutoTour() {
+  let seen = false;
+  try { seen = localStorage.getItem("otss_tour_seen") === "1"; } catch(_) {}
+  if (!seen) setTimeout(startTour, 900);
+}
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 loadLevel("2d");
 loadAggregate();
+maybeAutoTour();
 </script>
 </body>
 </html>
